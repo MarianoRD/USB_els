@@ -3,7 +3,7 @@
 # Variables
 CC = gcc
 CFLAGS = -g -Wall -Wextra
-OBJS = main.o directorios.o archivos.o librerias.o
+OBJS = main.o directorios.o archivos.o librerias.o pila.o
 
 # Regla all
 all: els
@@ -25,6 +25,9 @@ directorios.o: directorios.h librerias.o
 
 librerias.o: librerias.h
 	gcc $(CFLAGS) -c librerias.c
+
+pila.o: pila.h
+	gcc $(CFLAGS) -c pila.c
 
 # Clean
 

@@ -4,6 +4,8 @@
   #define LIBRERIAS
 #endif
 
+#include "pila.h"
+
 // Estructuras
 typedef struct
 {
@@ -16,14 +18,17 @@ typedef struct
   char fechaMod[DATE_MAX];
   char fechaAcc[DATE_MAX];
   int bytes;
+  int absoluto;
 
 } Directorio;
 
 // Funciones
 char *obtenerDirectorioRaiz();
 void informacionArchivos(Directorio *directorio);
-void permisosDirectorio(struct stat informacion);
+char *permisosDirectorio(struct stat informacion);
 Directorio *datosDirectorioActual(char *path);
 void imprimeDirectorio(char *abspath, Directorio directorio);
 Directorio *datosDirectorioRecursivo(char *path);
-void informacionArchivosRecursivo(Directorio *directorio);
+void informacionArchivosRecursivo(Directorio *directorio, Pila *pila);
+void borraCore(char*nombre);
+char *creaStr(Directorio *directorio);

@@ -12,6 +12,7 @@
 #include <grp.h>
 #include <time.h>
 #include <langinfo.h>
+#include <elf.h>
 
 // Macros
 #define PATH_MAX 4096    /* # chars in a path name including nul */
@@ -19,9 +20,13 @@
 #define READ 0  // Pipe read
 #define WRITE 1 // Pipe write
 #define DATE_MAX 12 /* chars in date */
+#define PERMISOS_MAX 11
+#define ARCHIVOS_MAX 21
+#define BYTES_MAX 21
 #define FORMATO_FECHA nl_langinfo(D_FMT)
 
 // Funciones
 
 void manejadorDeSenales(int);
 void crearPipe(int *pipeInfo);
+void verificarEscritura(struct stat *informacion);

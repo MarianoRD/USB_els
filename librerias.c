@@ -27,3 +27,30 @@ void crearPipe(int *pipeFD) {
 		exit(-1);
 	}
 }
+
+void verificarEscritura(struct stat *informacion) {
+    
+    // Guardo el ID del usuario
+    int uid = getuid();
+    int gid = getgid();
+	
+    if (gid == informacion->st_gid) {
+        if (S_IWGRP) {
+            return;
+        }
+    }
+    if (uid == informacion->st_uid) {
+        if (S_IWUSR) {
+            return;
+        }
+    }
+    if (((uid != informacion->st_uid) && (gid != informacion->st_gid))) {
+        if (S_IWOTH) {
+            return;
+        }
+    }
+
+    // Caso que no se pueda escribir
+    printf("No se puede escirbir en el directorio donde se desea guardar el reporte.\n");
+    exit(-1);
+}

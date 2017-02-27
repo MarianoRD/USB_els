@@ -33,6 +33,10 @@ int main(void) {
   DIR *directorio = opendir(raiz);
   Directorio *directorioStruct;
   directorioStruct = datosDirectorioActual(raiz);
+
+  // Verifico que pueda escribir en el directorio raiz.
+  verificarEscritura(&(directorioStruct->informacion));
+  // Imprimo los datos del directorio raiz
   imprimeDirectorio("", *directorioStruct);
 
   // Ciclo del proceso
@@ -105,6 +109,8 @@ int main(void) {
 
   // Manejador de Señales
   signal(SIGINT, manejadorDeSenales);
+
+  // Fin de impresion.
   printf("\nTerminé\n");
   while(1) {
 
