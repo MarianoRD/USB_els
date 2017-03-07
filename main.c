@@ -11,12 +11,18 @@ struct dirent *fd;
 struct stat buffer;
 int pipeInfo[2];
 int pidHijo;
+Pila pila;
 
 // Main
 
-/*int main(int argc, char* argv[]) {*/
-int main(void) {
-/*
+int main(int argc, char* argv[]) {
+
+  // Inicializa los valores de la pila
+  pila.tope = NULL;
+  pila.cantElementos = 0;
+  // Manejador de Señales
+  signal(SIGINT, manejadorDeSenales);
+
   // Asegurarse de que hayan ingresado el nombre del archivo de salida
   if (argc < 2) {
     printf("\n");
@@ -25,23 +31,23 @@ int main(void) {
     // Sale con codigo de error
     exit(-1);
   }
-*/
+
   // Obtiene el directorio donde se está trabajando
   char *raiz = obtenerDirectorioRaiz();
 
   // Abre el directorio
   DIR *directorio = opendir(raiz);
-  Directorio *directorioStruct;
-  directorioStruct = datosDirectorioActual(raiz);
+  Directorio directorioStruct;
+  strcpy(directorioStruct.path, raiz);
+  datosDirectorioActual(&directorioStruct);
 
   // Verifico que pueda escribir en el directorio raiz.
-  verificarEscritura(&(directorioStruct->informacion));
+  verificarEscritura(&(directorioStruct.informacion));
   // Imprimo los datos del directorio raiz
-  imprimeDirectorio("", *directorioStruct);
+  //imprimeDirectorio("", *directorioStruct);
 
   // Ciclo del proceso
   while ((fd = readdir(directorio)) != NULL) {
-
     stat(fd->d_name, &buffer);
     
 
@@ -64,9 +70,8 @@ int main(void) {
         close(pipeInfo[READ]);
         // Busca toda la información
         Directorio *hijo;
-        hijo = datosDirectorioRecursivo(fd->d_name);
+        hijo = datosDirectorioRecursivo(argv[1], fd->d_name);
         // Se la comunica al padre
-        //write(pipeInfo[WRITE], &hijo, sizeof(hijo));
         write(pipeInfo[WRITE], hijo->path, sizeof(hijo->path));
         write(pipeInfo[WRITE], &(hijo->cantArchivos), sizeof(hijo->cantArchivos));
         write(pipeInfo[WRITE], &(hijo->informacion), sizeof(hijo->informacion));
@@ -76,6 +81,7 @@ int main(void) {
         write(pipeInfo[WRITE], &(hijo->fechaAcc), sizeof(hijo->fechaAcc));
         write(pipeInfo[WRITE], &(hijo->bytes), sizeof(hijo->bytes));
         // El hijo termina
+        printf("Free hijo\n");
         free(hijo);
         exit(0);
       } else { // Es padre
@@ -98,23 +104,29 @@ int main(void) {
         close(pipeInfo[READ]);
 
         // Imprime la información del hijo
-        imprimeDirectorio(raiz, hijo);
+        Salida salidaHijo;
+        creaStr(&hijo, salidaHijo.string);
+        /*
+        strcpy(salidaHijo.string, str);
+        */
+        salidaHijo.next = NULL;
+        agregarPila(&salidaHijo, &pila);
       }
     
     }
   }
 
+  // Cambio el directorio al raiz de els
+  chdir(raiz);
+  // Creo el reporte del padre
+  printf("Entro a crear reporte padre con: %s\n", directorioStruct.nombre);
+  creaReporte(argv[1], "Proyecto_1", &pila, 0);
+
   // Cierra el directorio
   closedir(directorio);
 
-  // Manejador de Señales
-  signal(SIGINT, manejadorDeSenales);
-
   // Fin de impresion.
   printf("\nTerminé\n");
-  while(1) {
-
-  };
 
   // Finaliza
   return 0;

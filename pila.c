@@ -16,6 +16,9 @@ void sacarPila(Pila *pila) { // DEBERIA DEVOLVER LA SALIDA
 	Salida *temp;
 	temp = pila->tope;
 	pila->tope = (pila->tope)->next;
-
+	temp->next = NULL;
+	/*
+	free(temp);
+	*/
 	pila->cantElementos--;
 };

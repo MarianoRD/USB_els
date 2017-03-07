@@ -10,6 +10,7 @@
 typedef struct
 {
   char path[PATH_MAX];
+  char nombre[NAME_MAX];
   DIR *dir;
   int cantArchivos;
   struct stat informacion;
@@ -26,9 +27,10 @@ typedef struct
 char *obtenerDirectorioRaiz();
 void informacionArchivos(Directorio *directorio);
 char *permisosDirectorio(struct stat informacion);
-Directorio *datosDirectorioActual(char *path);
-void imprimeDirectorio(char *abspath, Directorio directorio);
-Directorio *datosDirectorioRecursivo(char *path);
-void informacionArchivosRecursivo(Directorio *directorio, Pila *pila);
+void datosDirectorioActual(Directorio *directorio);
+void creaReporte(char *archivo, char* nombre, Pila *pila, int hijo);
+Directorio *datosDirectorioRecursivo(char *outputFile, char *path);
+void informacionArchivosRecursivo(Directorio *directorioA, Pila *pila);
 void borraCore(char*nombre);
-char *creaStr(Directorio *directorio);
+char *creaStr(Directorio *directorio, char *str);
+void imprimeDirectorio(char *abspath, Directorio directorio);

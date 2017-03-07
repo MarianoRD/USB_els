@@ -8,11 +8,13 @@
 
 // Estructuras
 
-typedef struct {
+typedef struct Salida Salida;
 
-	char *string;
-	void *next;
-} Salida;
+struct Salida {
+
+	char string[STRING_MAX];
+	Salida *next;
+};
 
 
 typedef struct {

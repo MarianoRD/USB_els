@@ -71,32 +71,20 @@ void informacionArchivosRecursivo(Directorio *directorio, Pila *pila) {
   directorio->bytes = 0;
   directorio->cantArchivos = 0;
 
-
-  // Cuenta solamente los archivos
   while ((fd = readdir(directorio->dir)) != NULL) {
+    
     // No cuenta los archivos ocultos
     if (fd->d_name[0] == '.') {
       continue;
     }
     char abs[PATH_MAX];
     realpath(fd->d_name, abs);
-
-    if (stat(abs, &info) == -1) {
-
+    if (stat(fd->d_name, &info) == -1) {
+      if (errno == ENOENT) {
+        printf("ENOENT");
+      }
       printf("Error scan()\n");
-      
-/*
-      char abs[PATH_MAX];
-      getcwd(abs, PATH_MAX);
-      strcat(abs, "/");
-      strcat(abs, directorio->path);
-      strcat(abs, "/");
-      strcat(abs, fd->d_name);
-
-      stat(abs, &info);
-*/
     };
-
     if (S_ISDIR(info.st_mode)) {
 
       // Inicializo las variables
@@ -104,37 +92,21 @@ void informacionArchivosRecursivo(Directorio *directorio, Pila *pila) {
       Salida *elemento = (Salida *) malloc(sizeof(Salida));
 
       realpath(fd->d_name, recursivo->path);
-      
-      /*
-      // Concateno el padre a la primera recursion
-      strcpy(recursivo->path, "");
-      strcat(recursivo->path, directorio->path);
-      strcat(recursivo->path, "/");
-      strcat(recursivo->path, fd->d_name);
-      recursivo->absoluto = 1;
-      // Concatena el nombre
-      char abs[PATH_MAX];
-      getcwd(abs, PATH_MAX);
-      strcat(abs, "/");
-      strcat(abs, directorio->path);
-      strcat(abs, "/");
-      strcat(abs, fd->d_name);
-      */
 
       // Crea el DIR
       recursivo->dir = opendir(recursivo->path);
-
-      /*
-      recursivo->dir = opendir(abs);
-      */
-
+      // Recursión
+      chdir(recursivo->path);
       informacionArchivosRecursivo(recursivo, pila);
+      // Regreso el directorio y cierro el DIR
+      chdir(directorio->path);
+      closedir(recursivo->dir);
+      // Actualizo los datos
       (directorio->cantArchivos) += recursivo->cantArchivos + 1;
       (directorio->bytes) += recursivo->bytes;
-      
 
       // Guarda el elemento en la pila
-      elemento->string = creaStr(recursivo);
+      creaStr(recursivo, elemento->string);
       elemento->next = NULL;
       agregarPila(elemento, pila);
       // Elimina el Directorio de recursión.
@@ -168,11 +140,8 @@ char *permisosDirectorio(struct stat informacion){
 
 
 /* Obtiene toda la información del directorio desde donde se está ejecutando el programa. */
-Directorio *datosDirectorioActual(char *path){
-  // Inicializa el directorio
-  Directorio *directorio = (Directorio *) malloc(sizeof(Directorio));
-  // Inicializa las variables
-  strcpy((directorio->path), path);
+void datosDirectorioActual(Directorio *directorio){
+
   directorio->dir = opendir(directorio->path);
   informacionArchivos(directorio);
   stat(".", &(directorio->informacion));
@@ -181,22 +150,24 @@ Directorio *datosDirectorioActual(char *path){
   strftime(directorio->fechaMod, sizeof(directorio->fechaMod), FORMATO_FECHA, localtime(&directorio->informacion.st_mtime));
   strftime(directorio->fechaAcc, sizeof(directorio->fechaAcc), FORMATO_FECHA, localtime(&directorio->informacion.st_atime));
 
-  // Retorna
-  return directorio;
 }
 
 /* Obtiene toda la información del directorio desde donde se está ejecutando el programa. */
-Directorio *datosDirectorioRecursivo(char *path){
+Directorio *datosDirectorioRecursivo(char *outputFile, char *path){
 
   // Inicializa el directorio
   Directorio *directorio = (Directorio *) malloc(sizeof(Directorio));
   Pila *pila = (Pila *) malloc(sizeof(Pila));
   Salida elementoPila;
   // Inicializa las variables
-  strcpy((directorio->path), path);
+  realpath(path, (directorio->path));
+  printf("Path directorio (datosDirectorioRecursivo): %s\n", (directorio->path));
   directorio->dir = opendir(directorio->path);
-  // Creo la pila del directorio
+  /* ---------------------------------------- PRUEBA */
+  chdir(directorio->path);
+  /*               */
   informacionArchivosRecursivo(directorio, pila);
+  chdir(directorio->path);
   stat(".", &(directorio->informacion));
   directorio->grupo = *getgrgid(directorio->informacion.st_gid);
   directorio->usuario = *getpwuid(directorio->informacion.st_uid);
@@ -204,50 +175,56 @@ Directorio *datosDirectorioRecursivo(char *path){
   strftime(directorio->fechaAcc, sizeof(directorio->fechaAcc), FORMATO_FECHA, localtime(&directorio->informacion.st_atime));
 
   // Agrego el directorio a la pila
-  char *str = creaStr(directorio);
-  elementoPila.string = str;
+  creaStr(directorio, elementoPila.string);
+  /*
+  strcpy(elementoPila.string, str);
+  */
   elementoPila.next = NULL;
   agregarPila(&elementoPila, pila);
 
   // Imprimo el reporte del hijo
-
+  creaReporte(outputFile, path, pila, 1);
   // Libero el espacio de la pila
   free(pila);
   // Retorno
   return directorio;
 }
 
-void imprimeDirectorio(char *abspath, Directorio directorio){
-  // Imprime de la información del directorio
-  if ((strcmp(abspath, "") == 0) || (directorio.absoluto == 1)) {
-    printf("%s/ ", directorio.path);
-  } else {
-    printf("%s/%s/ ", abspath, directorio.path); // Dirección del directorio
+void creaReporte(char *archivo, char *nombre, Pila *pila, int hijo){
+
+  FILE *archSalida;
+
+  if (hijo == 1) {
+    chdir("/tmp");
   }
-  printf("| ");
-  permisosDirectorio(directorio.informacion); // Permisos del directorio
-  printf(" ");
-  printf("| %s ", (directorio.usuario).pw_name); // User-ID
-  printf("| %s ", (directorio.grupo).gr_name); // Group-ID
-  printf("| %s ", directorio.fechaMod); // Fecha de Modificación
-  printf("| %s ", directorio.fechaAcc); // Fecha de Acceso
-  printf("| %d ", directorio.cantArchivos); // Cantidad de archivos
-  printf("| %d ", directorio.bytes);
-  printf("\n");
+
+  // Creo el nombre del archivo a guardar
+  strcat(archivo, "-");
+  strcat(archivo, nombre);
+  //strcat(archivo, ".txt");
+  archSalida = fopen(archivo, "w");
+
+  while (pila->cantElementos > 0) {
+    // Escribe en el archivo
+    fprintf(archSalida, "%s", pila->tope->string);
+    printf("%s\n", pila->tope->string);
+    sacarPila(pila);
+  }
+
+  fclose(archSalida);
 }
 
-char *creaStr(Directorio *directorio){
+char *creaStr(Directorio *directorio, char *str){
   // Imprime de la información del directorio
-  char *str = (char *) malloc(sizeof(char) * PATH_MAX);
   char *permisos;
   char archivos[ARCHIVOS_MAX];
   char bytes[BYTES_MAX];
-
   permisos = permisosDirectorio(directorio->informacion);
   sprintf(archivos, "%d", directorio->cantArchivos);
   sprintf(bytes, "%d", directorio->bytes);
 
   // Creo el str
+  strcpy(str, "");
   strcat(str, directorio->path);
   strcat(str, " | ");
   strcat(str, permisos);
@@ -264,9 +241,8 @@ char *creaStr(Directorio *directorio){
   strcat(str, " | ");
   strcat(str, bytes);
   strcat(str, "\n");
-
   // Libero memoria
   free(permisos);
-
+  printf("String: %s\n", str);
   return str;
 }
