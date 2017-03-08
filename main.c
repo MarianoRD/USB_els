@@ -1,15 +1,15 @@
 // Librerías
-#include "archivos.h"
 #include "directorios.h"
 
 // Constantes y Variables Globales
 
 
 // Declaración de variables
-char raiz[PATH_MAX];
-struct dirent *fd;
-struct stat buffer;
-int pipeInfo[2];
+Directorio raiz;
+String str;
+struct dirent *fdActual;
+struct stat statActual;
+int pipeRaiz[2];
 int pidHijo;
 Pila pila;
 
@@ -17,11 +17,17 @@ Pila pila;
 
 int main(int argc, char* argv[]) {
 
-  // Inicializa los valores de la pila
-  pila.tope = NULL;
-  pila.cantElementos = 0;
+  // Inicializa los valores de las estructuras
+  raiz.bytes = 0;
+  raiz.cantArchivos = 0;
+  raiz.cantDirectorios = 0;
+
   // Manejador de Señales
   signal(SIGINT, manejadorDeSenales);
+
+  // Inicializo variables
+  char nombreArchivoSalida[NAME_MAX];
+  strcpy(nombreArchivoSalida, argv[1]);
 
   // Asegurarse de que hayan ingresado el nombre del archivo de salida
   if (argc < 2) {
@@ -32,103 +38,106 @@ int main(int argc, char* argv[]) {
     exit(-1);
   }
 
-  // Obtiene el directorio donde se está trabajando
-  char *raiz = obtenerDirectorioRaiz();
+  // Obtiene el directorio actual
+  if(getcwd(raiz.rutaAbs, PATH_MAX) == NULL) {
+    printf("Error con getcwd(), main.c\n");
+  };
 
   // Abre el directorio
-  DIR *directorio = opendir(raiz);
-  Directorio directorioStruct;
-  strcpy(directorioStruct.path, raiz);
-  datosDirectorioActual(&directorioStruct);
-
-  // Verifico que pueda escribir en el directorio raiz.
-  verificarEscritura(&(directorioStruct.informacion));
-  // Imprimo los datos del directorio raiz
-  //imprimeDirectorio("", *directorioStruct);
-
-  // Ciclo del proceso
-  while ((fd = readdir(directorio)) != NULL) {
-    stat(fd->d_name, &buffer);
-    
-
-    // Revisa que no sea un directorio oculto
-    if (fd->d_name[0] == '.') {
-      continue;
-    }
-    if (S_ISDIR(buffer.st_mode)) {
-
-      // Abre el pipe (recibe ambas puntas cerradas)
-      crearPipe(pipeInfo);
-
-      // Crea un proceso hijo
-      pidHijo = fork();
-      if(pidHijo == -1) { // Error
-        printf("fork() error.\n");
-        exit(-1);
-      } else if (pidHijo == 0) { // Es hijo
-        // Cierra la lectura
-        close(pipeInfo[READ]);
-        // Busca toda la información
-        Directorio *hijo;
-        hijo = datosDirectorioRecursivo(argv[1], fd->d_name);
-        // Se la comunica al padre
-        write(pipeInfo[WRITE], hijo->path, sizeof(hijo->path));
-        write(pipeInfo[WRITE], &(hijo->cantArchivos), sizeof(hijo->cantArchivos));
-        write(pipeInfo[WRITE], &(hijo->informacion), sizeof(hijo->informacion));
-        write(pipeInfo[WRITE], &(hijo->grupo), sizeof(hijo->grupo));
-        write(pipeInfo[WRITE], &(hijo->usuario), sizeof(hijo->usuario));
-        write(pipeInfo[WRITE], &(hijo->fechaMod), sizeof(hijo->fechaMod));
-        write(pipeInfo[WRITE], &(hijo->fechaAcc), sizeof(hijo->fechaAcc));
-        write(pipeInfo[WRITE], &(hijo->bytes), sizeof(hijo->bytes));
-        // El hijo termina
-        printf("Free hijo\n");
-        free(hijo);
-        exit(0);
-      } else { // Es padre
-        // Cierra la escritura
-        close(pipeInfo[WRITE]);
-        // Espera al hijo
-        wait(0);
-        // Lee la información del pipe
-        Directorio hijo;
-        // Empiezo a leer el pipe
-        read(pipeInfo[READ], hijo.path, sizeof(hijo.path));
-        read(pipeInfo[READ], &(hijo.cantArchivos), sizeof(hijo.cantArchivos));
-        read(pipeInfo[READ], &(hijo.informacion), sizeof(hijo.informacion));
-        read(pipeInfo[READ], &(hijo.grupo), sizeof(hijo.grupo));
-        read(pipeInfo[READ], &(hijo.usuario), sizeof(hijo.usuario));
-        read(pipeInfo[READ], &(hijo.fechaMod), sizeof(hijo.fechaMod));
-        read(pipeInfo[READ], &(hijo.fechaAcc), sizeof(hijo.fechaAcc));
-        read(pipeInfo[READ], &(hijo.bytes), sizeof(hijo.bytes));
-        // Cierra el pipe
-        close(pipeInfo[READ]);
-
-        // Imprime la información del hijo
-        Salida salidaHijo;
-        creaStr(&hijo, salidaHijo.string);
-        /*
-        strcpy(salidaHijo.string, str);
-        */
-        salidaHijo.next = NULL;
-        agregarPila(&salidaHijo, &pila);
-      }
-    
-    }
+  raiz.dir = opendir(raiz.rutaAbs);
+  if(raiz.dir == NULL) {
+    printf("Error con opendir(), main.c\n");
+    exit(-1);
   }
 
-  // Cambio el directorio al raiz de els
-  chdir(raiz);
-  // Creo el reporte del padre
-  printf("Entro a crear reporte padre con: %s\n", directorioStruct.nombre);
-  creaReporte(argv[1], "Proyecto_1", &pila, 0);
+  // Busco los datos del directorio
+  datosDirectorio(&raiz);
 
-  // Cierra el directorio
-  closedir(directorio);
+  // Inicializo la pila
+  iniciarPila(&pila, raiz.cantDirectorios);
 
-  // Fin de impresion.
-  printf("\nTerminé\n");
+  // Verifico que pueda escribir en el directorio raiz.
+  verificarEscritura(&(raiz.informacion));
 
-  // Finaliza
+  // Agrego raiz a la pila
+  creaStr(&raiz, str);
+  pushPila(&pila, &str);
+
+  // Reinicio el apuntador de 'raiz'
+  rewinddir(raiz.dir);
+
+  /* EN CASO DE CONCURRENCIA --------------------------------------------------<
+  // Creo el arreglo con los datos de los hijos
+  int hijos[raiz.cantDirectorios];
+  */
+
+  // Ciclo
+  while((fdActual = readdir(raiz.dir)) != NULL) {
+    // Revisa que no sea un directorio oculto
+    if (fdActual->d_name[0] == '.') {
+      continue;
+    }
+
+    // Busca información del archivo
+    if (stat(fdActual->d_name, &statActual) < 0) {
+      printf("Error stat(), main.c\n");
+      exit(-1);
+    }
+
+    // Si es directorio
+    if (S_ISDIR(statActual.st_mode)) {
+      printf("Directorio: %s\n", fdActual->d_name); // quitar() ---------------<
+      // Crea el pipe
+      pipe(pipeRaiz);
+      // Crea un proceso hijo
+      pidHijo = fork();
+      if(pidHijo == -1) {
+        printf("Error fork(), main.c\n");
+        exit(-1);
+      } else if (pidHijo == 0) { // Hijo
+        printf("Hijo creado\n");
+        // Cierra la lectura
+        close(pipeRaiz[READ]);
+
+        // Crea la estructura
+        Directorio hijo;
+        // Inicializa las variables de 'hijo'
+        strcpy(hijo.nombre, fdActual->d_name);
+        realpath(hijo.nombre, hijo.rutaAbs);
+        hijo.cantArchivos = 0;
+        hijo.cantDirectorios = 0;
+        hijo.bytes = 0;
+        // Busca la información de los hijos
+        datosHijo(&hijo, nombreArchivoSalida);
+        // Escribe la información en el pipe
+        // Deberia escribir solo el str ---------------------------------------<
+
+        // El hijo termina
+        printf("Exit hijo\n"); // Quitar --------------------------------------<
+        exit(0);
+      } else if (pidHijo > 0) { // Padre
+        // Cierra la escritura
+        close(pipeRaiz[WRITE]);
+        // Espera al hijo
+        int estadoReturn;    
+        waitpid(pidHijo, &estadoReturn, 0); // Cambiar por waitpid para que no sea bloqueante ------------<
+        if (estadoReturn < 0) {
+          printf("Hubo un error en la terminación del hijo\n");
+        } 
+        // Lee la información del pipe
+
+        //
+
+      }
+    }
+  };
+
+  // Crea el reporte padre
+  crearReporte(raiz.rutaAbs, &pila, raiz.nombre, nombreArchivoSalida);
+  // Cierro del directorio
+  closedir(raiz.dir);
+  // Finaliza el programa
+  printf("Programa terminó con éxito\n");
   return 0;
 
 }

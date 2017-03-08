@@ -23,7 +23,7 @@
 #define PERMISOS_MAX 11
 #define ARCHIVOS_MAX 21
 #define BYTES_MAX 21
-#define STRING_MAX 5000
+#define STR_MAX 6000
 #define FORMATO_FECHA nl_langinfo(D_FMT)
 
 // Funciones

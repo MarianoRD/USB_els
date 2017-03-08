@@ -8,24 +8,23 @@
 
 // Estructuras
 
-typedef struct Salida Salida;
-
-struct Salida {
-
-	char string[STRING_MAX];
-	Salida *next;
-};
+typedef char String[PATH_MAX];
 
 
 typedef struct {
 	
-	Salida *tope;
-	int cantElementos;
+
+	String *contenido;
+	int top;
+	int maxElementos;
 
 } Pila;
 
 
 // Funciones
-
-void agregarPila(Salida *elemento, Pila *pila);
-void sacarPila(Pila *pila);
+void iniciarPila(Pila *pila, int cantidadElementos);
+void destruyePila(Pila *pila);
+int pilaLlena(Pila *pila);
+int pilaVacia(Pila *pila);
+void pushPila(Pila *pila, String *elemento);
+void popPila(Pila *pila, String *str);
