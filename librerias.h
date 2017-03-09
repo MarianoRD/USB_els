@@ -13,6 +13,7 @@
 #include <time.h>
 #include <langinfo.h>
 #include <elf.h>
+#include <libgen.h>
 
 // Macros
 #define PATH_MAX 4096    /* # chars in a path name including nul */
@@ -30,3 +31,4 @@
 
 void manejadorDeSenales(int);
 void verificarEscritura(char *str);
+int verificarPermisosRX(char *str);

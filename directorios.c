@@ -1,6 +1,6 @@
 // Librerias
 #include "directorios.h"
-#include <errno.h> // Quitar --------------------------------<
+#include <errno.h>
 
 // Funciones
 
@@ -29,6 +29,7 @@ void informacionArchivos(Directorio *directorio) {
     } else {
       (directorio->cantArchivos)++;
       directorio->bytes = directorio->bytes + info.st_size;
+      eliminaCore(fd->d_name);
     }
   }
 }
@@ -120,7 +121,7 @@ void datosHijo(Directorio *directorio, char *nombreArchivoSalida) {
   chdir(directorio->rutaAbs);
   datosDirectorio(directorio);
   // Inicializo la pila
-  iniciarPila(&pila, (directorio->cantDirectorios)*10);
+  iniciarPila(&pila, (directorio->cantDirectorios)*100);
   // Crea su string
   creaStr(directorio, strHijo);
 
@@ -141,6 +142,11 @@ void datosHijo(Directorio *directorio, char *nombreArchivoSalida) {
 
     // Si es directorio
     if (S_ISDIR(stat_.st_mode)) {
+      // Verifica que se pueda leer y ejecutar
+      if(verificarPermisosRX(fd->d_name)) {
+        printf("No se pudo leer/ejecutar en: %s\n", fd->d_name);
+        continue;
+      }
       char path[PATH_MAX];
       realpath(fd->d_name, path);
       // Empieza la función recursiva
@@ -228,6 +234,11 @@ void datosSubDirectorio(char *path, Pila *pila, int *bytes, int *archivos) {
 
   // Si es directorio
   if (S_ISDIR(stat_.st_mode)) {
+    // Verifica que se pueda leer y ejecutar
+    if(verificarPermisosRX(fd->d_name)) {
+      printf("No se pudo leer/ejecutar en: %s\n", fd->d_name);
+      continue;
+    }
     char path[PATH_MAX];
     realpath(fd->d_name, path);
     // Entra en la recursión
@@ -245,4 +256,16 @@ void datosSubDirectorio(char *path, Pila *pila, int *bytes, int *archivos) {
   pushPila(pila, &str);
 
   return;
+}
+
+void eliminaCore(char *nombreArchivo) {
+  if (strlen(nombreArchivo) < 5) {
+    return;
+  }
+  if (nombreArchivo[0] == 'c' && nombreArchivo[1] == 'o' && 
+      nombreArchivo[2] == 'r' && nombreArchivo[3] == 'e' && 
+      nombreArchivo[4] == '.') {
+    printf("Archivo core: %s | Eliminado\n", nombreArchivo);
+    remove(nombreArchivo);
+  }
 }

@@ -29,3 +29,11 @@ void verificarEscritura(char *str) {
         exit(-1);
     }
 }
+
+int verificarPermisosRX(char *str) {
+    if((access(str, R_OK) == 0) && (access(str, X_OK) == 0)) {
+        return 0;
+    } else {
+        return 1;
+    }
+}

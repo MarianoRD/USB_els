@@ -1,0 +1,96 @@
+
+********************************************************************************
+*                              els                                             *
+********************************************************************************
+
+
+En este archivo se encuentra la información escencial, sobre la estructura y
+el uso del programa els. 
+El programa se entrega con el código fuente y un archivo 'makefile' 
+para realizar una recompilación del mismo en caso de ser necesaria.
+
+
+Contenido:
+-----------
+  
+  1- Autores
+  2- Archivos del programa
+  3- Estructura del programa
+  4- Makefile
+  5- Ejecución del programa
+  6- Licencia
+
+
+
+1- Autores:
+------------
+  
+  Mariano Rodríguez 12-10892
+  Pablo Gonzalez 13-10575
+
+
+
+2- Archivos del programa:
+--------------------------
+
+  El programa cuenta con 11 archivos, los cuales son los siguientes:
+    - README
+    - makefile
+    - archivos (.h y .c)
+    - directorios (.h y.c)
+    - librerias (.h y .c)
+    - pila (.c y .h)
+    - main (.c)
+
+
+
+3- Estructura del programa:
+----------------------------
+
+  Cada archivo del programa, tiene cierta dependencia de los demás archivos
+  del mismo para poder funcionar.
+
+  Las dependencias son:
+
+      main
+          |
+          directorios
+            |
+            librerias
+            <errno.h>
+              |
+			  <stdio.h>
+			  <stdlib.h>
+			  <string.h>
+			  <unistd.h>
+			  <dirent.h>
+			  <signal.h>
+			  <sys/types.h>
+			  <sys/stat.h>
+			  <sys/wait.h>
+			  <pwd.h>
+			  <grp.h>
+			  <time.h>
+			  <langinfo.h>
+			  <elf.h>
+        <libgen.h>
+
+
+
+5- Ejecución del programa:
+---------------------------
+
+  Para ejecutar el programa, es necesario llamar al ejecutable generado
+  previamente por el 'makefile', el cual se llama 'els' y pasarle por la 
+  consola, en el mismo comando de su llamada, el nombre del archivo donde se desea que se guarden los datos al terminar de correr el programa. 
+
+      Ejemplo: $ els archsalida
+
+
+
+6- Licencia:
+------------------------
+
+  Este programa se encuentra protegido bajo una licencia MIT.
+
+  Copyright (c) 2017 Mariano Rodríguez, Pablo Gonzalez.

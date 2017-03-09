@@ -55,6 +55,8 @@ int main(int argc, char* argv[]) {
 
   // Busco los datos del directorio
   datosDirectorio(&raiz);
+  // Hallo el nombre del directorio raiz
+  strcpy(raiz.nombre, basename(raiz.rutaAbs));
 
   // Inicializo la pila
   iniciarPila(&pila, raiz.cantDirectorios);
@@ -80,6 +82,11 @@ int main(int argc, char* argv[]) {
 
     // Si es directorio
     if (S_ISDIR(statActual.st_mode)) {
+      // Verifica que se pueda leer y ejecutar
+      if(verificarPermisosRX(fdActual->d_name)) {
+        printf("No se pudo leer/ejecutar en: %s\n", fdActual->d_name);
+        continue;
+      }
       // Crea el pipe
       pipe(pipeRaiz);
       // Crea un proceso hijo
