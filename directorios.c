@@ -41,7 +41,6 @@ void datosDirectorio(Directorio *directorio) {
   informacionArchivos(directorio);
   char ruta[PATH_MAX];
   getcwd(ruta, PATH_MAX);
-  printf("%s\n", ruta);
   // Busca la información del directorio
   if(stat(".", &(directorio->informacion)) == -1) {
     printf("Error stat(), datosDirectorio(), directorios.c\n");
@@ -157,7 +156,6 @@ void datosHijo(Directorio *directorio, char *nombreArchivoSalida) {
   // Regresa al directorio original
   chdir(rutaInicial);
   // Totaliza los archivos y bytes
-  printf("Bytes: %d+%d\n", directorio->bytes, bytes);
   directorio->bytes = directorio->bytes + bytes;
   directorio->cantArchivos = directorio->cantArchivos + archivos;
   return;
@@ -241,8 +239,8 @@ void datosSubDirectorio(char *path, Pila *pila, int *bytes, int *archivos) {
   // Regresa al directorio original
   chdir(rutaInicial);
   // Guarda la información en la pila
-  bytes = bytes + directorio.bytes;
-  archivos = archivos + directorio.cantArchivos;
+  *bytes = *bytes + directorio.bytes;
+  *archivos = *archivos + directorio.cantArchivos;
   creaStr(&directorio, str);
   pushPila(pila, &str);
 
