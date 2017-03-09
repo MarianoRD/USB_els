@@ -20,37 +20,12 @@ void  manejadorDeSenales(int senal)
      scanf("%c", &c);
 }
 
-void crearPipe(int *pipeFD) {
-	// Chequea que se cree el pipe
-	if (pipe(pipeFD) == -1) {
-		printf("pipe() error.\n");
-		exit(-1);
-	}
-}
-
-void verificarEscritura(struct stat *informacion) {
-    
-    // Guardo el ID del usuario
-    int uid = getuid();
-    int gid = getgid();
-	
-    if (gid == informacion->st_gid) {
-        if (S_IWGRP) {
-            return;
-        }
+void verificarEscritura(char *str) {
+    if(access(str, W_OK) == 0) {
+        return;
+    } else {
+        printf("No se puede crear el reporte en el directorio escogido.\n");
+        printf("El programa terminará.\n");
+        exit(-1);
     }
-    if (uid == informacion->st_uid) {
-        if (S_IWUSR) {
-            return;
-        }
-    }
-    if (((uid != informacion->st_uid) && (gid != informacion->st_gid))) {
-        if (S_IWOTH) {
-            return;
-        }
-    }
-
-    // Caso que no se pueda escribir
-    printf("No se puede escirbir en el directorio donde se desea guardar el reporte.\n");
-    exit(-1);
 }

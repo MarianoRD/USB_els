@@ -43,6 +43,9 @@ int main(int argc, char* argv[]) {
     printf("Error con getcwd(), main.c\n");
   };
 
+  // Verifica que se pueda escribir en el directorio
+  verificarEscritura(raiz.rutaAbs);
+
   // Abre el directorio
   raiz.dir = opendir(raiz.rutaAbs);
   if(raiz.dir == NULL) {
@@ -55,9 +58,6 @@ int main(int argc, char* argv[]) {
 
   // Inicializo la pila
   iniciarPila(&pila, raiz.cantDirectorios);
-
-  // Verifico que pueda escribir en el directorio raiz.
-  verificarEscritura(&(raiz.informacion));
 
   // Creo str de raiz
   creaStr(&raiz, str);

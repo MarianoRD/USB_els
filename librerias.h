@@ -29,5 +29,4 @@
 // Funciones
 
 void manejadorDeSenales(int);
-void crearPipe(int *pipeInfo);
-void verificarEscritura(struct stat *informacion);
+void verificarEscritura(char *str);

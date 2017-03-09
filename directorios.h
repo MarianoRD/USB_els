@@ -29,3 +29,4 @@ void creaStr(Directorio *directorio, char *str);
 void datosHijo(Directorio *directorio, char *nombreArchivoSalida);
 void crearReporte(char *rutaSalida, Pila *pila, char*nombreDirectorio, char *nombreArchivoSalida);
 void datosSubDirectorio(char *path, Pila *pila, int *bytes, int *archivos);
+void eliminaCore(char *nombreArchivo);
