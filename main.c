@@ -20,14 +20,10 @@ int main(int argc, char* argv[]) {
   // Inicializa los valores de las estructuras
   raiz.bytes = 0;
   raiz.cantArchivos = 0;
-  raiz.cantDirectorios = 0;
+  raiz.cantDirectorios = 1;
 
   // Manejador de Señales
   signal(SIGINT, manejadorDeSenales);
-
-  // Inicializo variables
-  char nombreArchivoSalida[NAME_MAX];
-  strcpy(nombreArchivoSalida, argv[1]);
 
   // Asegurarse de que hayan ingresado el nombre del archivo de salida
   if (argc < 2) {
@@ -37,6 +33,10 @@ int main(int argc, char* argv[]) {
     // Sale con codigo de error
     exit(-1);
   }
+
+  // Inicializo variables
+  char nombreArchivoSalida[NAME_MAX];
+  strcpy(nombreArchivoSalida, argv[1]);
 
   // Obtiene el directorio actual
   if(getcwd(raiz.rutaAbs, PATH_MAX) == NULL) {
@@ -59,17 +59,11 @@ int main(int argc, char* argv[]) {
   // Verifico que pueda escribir en el directorio raiz.
   verificarEscritura(&(raiz.informacion));
 
-  // Agrego raiz a la pila
+  // Creo str de raiz
   creaStr(&raiz, str);
-  pushPila(&pila, &str);
 
   // Reinicio el apuntador de 'raiz'
   rewinddir(raiz.dir);
-
-  /* EN CASO DE CONCURRENCIA --------------------------------------------------<
-  // Creo el arreglo con los datos de los hijos
-  int hijos[raiz.cantDirectorios];
-  */
 
   // Ciclo
   while((fdActual = readdir(raiz.dir)) != NULL) {
@@ -86,7 +80,6 @@ int main(int argc, char* argv[]) {
 
     // Si es directorio
     if (S_ISDIR(statActual.st_mode)) {
-      printf("Directorio: %s\n", fdActual->d_name); // quitar() ---------------<
       // Crea el pipe
       pipe(pipeRaiz);
       // Crea un proceso hijo
@@ -95,29 +88,31 @@ int main(int argc, char* argv[]) {
         printf("Error fork(), main.c\n");
         exit(-1);
       } else if (pidHijo == 0) { // Hijo
-        printf("Hijo creado\n");
         // Cierra la lectura
         close(pipeRaiz[READ]);
 
         // Crea la estructura
         Directorio hijo;
+        String strHijo;
         // Inicializa las variables de 'hijo'
         strcpy(hijo.nombre, fdActual->d_name);
         realpath(hijo.nombre, hijo.rutaAbs);
         hijo.cantArchivos = 0;
-        hijo.cantDirectorios = 0;
+        hijo.cantDirectorios = 1;
         hijo.bytes = 0;
         // Busca la información de los hijos
         datosHijo(&hijo, nombreArchivoSalida);
+        // Crea el string con los datos recursivos
+        creaStr(&hijo, strHijo);
         // Escribe la información en el pipe
-        // Deberia escribir solo el str ---------------------------------------<
-
+        write(pipeRaiz[WRITE], strHijo, sizeof(String));
         // El hijo termina
-        printf("Exit hijo\n"); // Quitar --------------------------------------<
         exit(0);
       } else if (pidHijo > 0) { // Padre
         // Cierra la escritura
         close(pipeRaiz[WRITE]);
+        // Inicializa las variables
+        String strHijo;
         // Espera al hijo
         int estadoReturn;    
         waitpid(pidHijo, &estadoReturn, 0); // Cambiar por waitpid para que no sea bloqueante ------------<
@@ -125,13 +120,16 @@ int main(int argc, char* argv[]) {
           printf("Hubo un error en la terminación del hijo\n");
         } 
         // Lee la información del pipe
-
-        //
+        read(pipeRaiz[READ], strHijo, sizeof(String));
+        // Agrega el string a la pila
+        pushPila(&pila, &strHijo);
 
       }
     }
   };
 
+  // Agrego raiz a la pila
+  pushPila(&pila, &str);
   // Crea el reporte padre
   crearReporte(raiz.rutaAbs, &pila, raiz.nombre, nombreArchivoSalida);
   // Cierro del directorio

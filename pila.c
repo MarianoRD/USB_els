@@ -9,7 +9,7 @@ void iniciarPila(Pila *pila, int cantidadElementos) {
 
   /* Allocate a new array to hold the contenido. */
 
-  contenido = (String *)malloc(sizeof(String)* (cantidadElementos+1));
+  contenido = (String *)malloc(sizeof(String)* cantidadElementos);
 
   if (contenido == NULL) {
     printf("Error inicializando la pila\n");
@@ -32,7 +32,7 @@ void destruyePila(Pila *pila) {
 }
 
 int pilaLlena(Pila *pila) {
-	if (pila->top == (pila->maxElementos)) {
+	if (pila->top == (pila->maxElementos) - 1) {
 		return 1;
 	} else {
 		return 0;
@@ -64,7 +64,7 @@ void pushPila(Pila *pila, String *elemento) {
 void popPila(Pila *pila, String *str) { // DEBERIA DEVOLVER LA SALIDA
 	// Chequea que la pila no esté vacía
 	if (pilaVacia(pila)) {
-    	printf("La pila está vacía, no se puede sacar un elemento.\n");
+    	printf("La pila está vacía, no hay elemento que sacar.\n");
     	exit(1);
   	}
 

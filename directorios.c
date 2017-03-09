@@ -101,9 +101,6 @@ void creaStr(Directorio *directorio, char *str){
   strcat(str, bytes);
   strcat(str, "\n");
 
-  // Impresion de chequeo
-  printf("String: %s", str);
-
   return;
 }
 
@@ -116,18 +113,19 @@ void datosHijo(Directorio *directorio, char *nombreArchivoSalida) {
   struct stat stat_;
   String strHijo;
   Pila pila;
+  int bytes = 0;
+  int archivos = 0;
   // Abro el directorio
   directorio->dir = opendir(directorio->rutaAbs);
   // Busca los datos
   chdir(directorio->rutaAbs);
   datosDirectorio(directorio);
   // Inicializo la pila
-  iniciarPila(&pila, directorio->cantDirectorios);
+  iniciarPila(&pila, (directorio->cantDirectorios)*10);
   // Crea su string
   creaStr(directorio, strHijo);
-  /*
-  Realiza la recursividad para sus sub-directorios
-  */
+
+
   // Reinicio el apuntador de 'raiz'
   rewinddir(directorio->dir);
   // Busca sus sub-directorios
@@ -144,12 +142,13 @@ void datosHijo(Directorio *directorio, char *nombreArchivoSalida) {
 
     // Si es directorio
     if (S_ISDIR(stat_.st_mode)) {
-      printf("Sub-Directorio: %s\n", fd->d_name);
-      //datosSubDirectorio(); -------------------------------------------------<
-      // Agrega a la pila la información
+      char path[PATH_MAX];
+      realpath(fd->d_name, path);
+      // Empieza la función recursiva
+      datosSubDirectorio(path, &pila, &bytes, &archivos);
     }
   }
-  // Agrega a la pila el primer string
+  // Agrega a la pila del hijo el primer string
   pushPila(&pila, &strHijo);
   // Crea el reporte
   crearReporte("/tmp", &pila, directorio->nombre, nombreArchivoSalida);
@@ -158,15 +157,16 @@ void datosHijo(Directorio *directorio, char *nombreArchivoSalida) {
   // Regresa al directorio original
   chdir(rutaInicial);
   // Totaliza los archivos y bytes
-
-  // Crea el string con los datos recursivos
-  creaStr(directorio, strHijo);
+  printf("Bytes: %d+%d\n", directorio->bytes, bytes);
+  directorio->bytes = directorio->bytes + bytes;
+  directorio->cantArchivos = directorio->cantArchivos + archivos;
+  return;
+  
 }
 
 void crearReporte(char *rutaSalida, Pila *pila, char *nombreDirectorio, char *nombreArchivoSalida) {
   // Inicializa las variables
   char nombreArchivo[NAME_MAX];
-  int i = 0;
   String str;
   // Guarda la ruta inicial de ejecución
   char rutaInicial[PATH_MAX];
@@ -178,18 +178,73 @@ void crearReporte(char *rutaSalida, Pila *pila, char *nombreDirectorio, char *no
   strcat(nombreArchivo, nombreArchivoSalida);
   strcat(nombreArchivo, "-");
   strcat(nombreArchivo, nombreDirectorio);
-  printf("Archivo guardado en: %s\n", nombreArchivo);
   // Abre el archivo
   FILE *archivo = fopen(nombreArchivo, "w");
   // Escribe el archivo
-  for (i = 0; i < pila->maxElementos; i++) {
+  while(!pilaVacia(pila)) {
     popPila(pila, &str);
     fprintf(archivo, "%s", str);
+    strcpy(str, "");
   }
   // Cierra el archivo
   fclose(archivo);
   // Regresa al directorio inicial
   chdir(rutaInicial);
+
+  return;
+}
+
+void datosSubDirectorio(char *path, Pila *pila, int *bytes, int *archivos) {
+  // Guarda la ruta inicial de ejecución
+  char rutaInicial[PATH_MAX];
+  getcwd(rutaInicial, PATH_MAX);
+  // Cambio el directorio
+  chdir(path);
+  // Inicializo las variables
+  Directorio directorio;
+  struct stat stat_;
+  struct dirent *fd;
+  directorio.bytes = 0;
+  directorio.cantArchivos = 0;
+  directorio.cantDirectorios = 1;
+  strcpy(directorio.rutaAbs, path);
+  String str;
+  // Abro el directorio
+  directorio.dir = opendir(directorio.rutaAbs);
+  // Busco los datos del directorio
+  datosDirectorio(&directorio);
+  // Reinicio el apuntador del directorio
+  rewinddir(directorio.dir);
+
+  // Hago la recursión
+  while((fd = readdir(directorio.dir)) != NULL) {
+  // Revisa que no sea un directorio oculto
+  if (fd->d_name[0] == '.') {
+    continue;
+  }
+  // Busca información del archivo
+  if (stat(fd->d_name, &stat_) < 0) {
+    printf("Error stat(), datosSubDirectorio(), directorios.c\n");
+    exit(-1);
+  }
+
+  // Si es directorio
+  if (S_ISDIR(stat_.st_mode)) {
+    char path[PATH_MAX];
+    realpath(fd->d_name, path);
+    // Entra en la recursión
+    datosSubDirectorio(path, pila, bytes, archivos);
+  }
+}
+  // Cierra el directorio
+  closedir(directorio.dir);
+  // Regresa al directorio original
+  chdir(rutaInicial);
+  // Guarda la información en la pila
+  bytes = bytes + directorio.bytes;
+  archivos = archivos + directorio.cantArchivos;
+  creaStr(&directorio, str);
+  pushPila(pila, &str);
 
   return;
 }
